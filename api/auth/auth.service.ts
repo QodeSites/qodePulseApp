@@ -45,8 +45,8 @@ export async function oauthlogin({
     });
     console.log(res,"===================repsone")
 
-    await tokenStorage.setAccess(res.data.accessToken);
-    await tokenStorage.setRefresh(res.data.refreshToken);
+    await tokenStorage.setAccess(res.data.access_token);
+    await tokenStorage.setRefresh(res.data.refresh_token);
 
     return res.data.user;
   } catch (error) {
