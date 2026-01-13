@@ -1,18 +1,42 @@
-import { useUser } from '@/context/UserContext';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { pyapi } from '@/api/axios';
+import { useUser } from '@/context/UserContext';
 
 export default function HomePage() {
-  
   const { user, setUser, isAuthenticated } = useUser();
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      setApiError(null);
+      try {
+        const res = await pyapi.get('/me'); 
+        console.log(res,"=====================res")
+        setMessage(res.data.message || 'Hello from API!');
+      } catch (err: any) {
+        setApiError('Failed to fetch greeting from API.');
+      }
+      setLoading(false);
+    }
+    fetchData();
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to QodePulse</Text>
       <Text style={styles.subtitle}>
-        {user.email}
+        {/* user may be null! */}
+        {user?.email ? user.email + '\n' : ''}
         This is your home page. Use the tabs below to navigate through the app.
       </Text>
       <Text style={styles.info}>
+        {loading && 'Loading greeting from API...'}
+        {apiError && apiError}
+        {!loading && !apiError && message && `${message}\n\n`}
         Start exploring features or check out other sections using the navigator.
       </Text>
       <Text style={styles.footer}>

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { setShouldAnimateExitingForTag } from 'react-native-reanimated/lib/typescript/core';
 import { useUser } from '@/context/UserContext';
+import { oauthlogin } from '@/api/auth/auth.service';
 
 export default function Page() {
   const router = useRouter();
@@ -23,12 +24,29 @@ export default function Page() {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const userInfo = await GoogleSignin.signIn();
       console.log(userInfo)
-      if (userInfo && userInfo?.data?.user.email) {
-        setUser(userInfo?.data?.user)
-        router.replace('/(tabs)');
+
+      // Make sure userInfo structure is correct before proceeding
+      if (userInfo && userInfo.data.user && userInfo.data.user.id && userInfo.data.user.email) {
+        try {
+          const userFromApi = await oauthlogin({
+            provider: "google",
+            provider_user_id: userInfo.data.user.id,
+            email: userInfo.data.user.email,
+            username: userInfo.data.user.name ?? userInfo.data.user.email.split("@")[0],
+            full_name: userInfo.data.user.name ?? "",
+            oauth_payload: userInfo
+          });
+          console.log(userFromApi)
+
+          setUser(userFromApi);
+          router.replace('/(tabs)');
+        } catch (e) {
+          setError('Failed to log in with Google.');
+        }
       } else {
         setError('No user information returned.');
       }
+
     } catch (err) {
       console.log(err,"====================err")
       setError('Authentication failed. Please try again.');
