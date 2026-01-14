@@ -43,7 +43,6 @@ export async function oauthlogin({
       full_name,
       oauth_payload,
     });
-    console.log(res,"===================repsone")
 
     await tokenStorage.setAccess(res.data.access_token);
     await tokenStorage.setRefresh(res.data.refresh_token);

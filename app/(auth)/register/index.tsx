@@ -23,7 +23,7 @@ export default function Page() {
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const userInfo = await GoogleSignin.signIn();
-      console.log(userInfo)
+ 
 
       // Make sure userInfo structure is correct before proceeding
       if (userInfo && userInfo.data.user && userInfo.data.user.id && userInfo.data.user.email) {
@@ -36,7 +36,6 @@ export default function Page() {
             full_name: userInfo.data.user.name ?? "",
             oauth_payload: userInfo
           });
-          console.log(userFromApi)
 
           setUser(userFromApi);
           router.replace('/(tabs)');
@@ -48,7 +47,6 @@ export default function Page() {
       }
 
     } catch (err) {
-      console.log(err,"====================err")
       setError('Authentication failed. Please try again.');
     } finally {
       setIsLoading(false);

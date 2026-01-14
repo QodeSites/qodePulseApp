@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { pyapi } from '@/api/axios';
+import { useFocusEffect } from '@react-navigation/native';
 
 type UserData = {
   created_at: string;
@@ -19,21 +20,32 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      setApiError(null);
-      try {
-        const res = await pyapi.get('/auth/me'); 
-        setUserData(res.data.data);
-        setMessage(res.data.message || 'Hello from API!');
-      } catch (err: any) {
-        setApiError('Failed to fetch user details from API.');
+  // Run fetchData every time the tab is focused using useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      async function fetchData() {
+        setLoading(true);
+        setApiError(null);
+        try {
+          const res = await pyapi.get('/auth/me'); 
+          if (!isActive) return;
+          setUserData(res.data.data);
+          setMessage(res.data.message || 'Hello from API!');
+        } catch (err: any) {
+          if (!isActive) return;
+          setApiError('Failed to fetch user details from API.');
+        }
+        if (!isActive) return;
+        setLoading(false);
       }
-      setLoading(false);
-    }
-    fetchData();
-  }, []);
+      fetchData();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   return (
     <View style={styles.container}>

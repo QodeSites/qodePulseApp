@@ -1,6 +1,7 @@
 import { tokenStorage } from "@/api/auth/tokenStorage";
 import axios from "axios";
-
+import { bootstrapAuth } from "./auth/bootstrapAuth";
+import { emitUnauthorized } from "@hooks/authEvents";
 // Utility to make sure headers object exists and is not undefined/null
 function ensureHeaders(config: any) {
   if (!config.headers) config.headers = {};
@@ -35,7 +36,6 @@ const pyapi = axios.create({
 
 export { api, pyapi };
 
-
 let refreshing = false as boolean;
 let queue: Array<{resolve: (token: string) => void, reject: (err: any) => void}> = [];
 
@@ -55,6 +55,7 @@ async function injectToken(config: any) {
 api.interceptors.request.use(injectToken);
 pyapi.interceptors.request.use(injectToken);
 
+// Improved handleAuthError function to ensure that 401 causes global logout if refresh fails (or no refresh token)
 async function handleAuthError(error: any, originApi: typeof api | typeof pyapi) {
   try {
     const original = error.config;
@@ -62,20 +63,22 @@ async function handleAuthError(error: any, originApi: typeof api | typeof pyapi)
       return Promise.reject(error);
     }
 
+    // Only handle 401 here
     if (error.response?.status === 401) {
       const refreshToken = await tokenStorage.getRefresh();
+    
       if (!refreshToken) {
         await tokenStorage.clear();
+        emitUnauthorized();
         return Promise.reject(error);
       }
-      console.log(refreshToken,"======================refreshToken")
-
       if (refreshing) {
         // Wait for refresh to complete and retry
         return new Promise((resolve, reject) => {
           queue.push({ resolve, reject });
         }).then((accessToken) => {
           if (!accessToken) {
+            emitUnauthorized();
             return Promise.reject(error);
           }
           // Retry with new token
@@ -88,15 +91,23 @@ async function handleAuthError(error: any, originApi: typeof api | typeof pyapi)
       refreshing = true;
 
       try {
-        // Request new tokens
-        const res = await axios.post(
-          `${process.env.EXPO_PUBLIC_API_URL}/api/auth/refresh`,
-          { refreshToken },
-          { headers: { "X-Client-Type": "native" } }
-        );
-        const { accessToken, refreshToken: newRefreshToken } = res.data;
-        await tokenStorage.setAccess(accessToken);
-        await tokenStorage.setRefresh(newRefreshToken);
+        // Try to refresh tokens
+        const refreshed = await bootstrapAuth();
+        if (!refreshed) {
+          queue.forEach(item => item.reject(error));
+          queue = [];
+          await tokenStorage.clear();
+          emitUnauthorized();
+          return Promise.reject(error);
+        }
+        let accessToken = await tokenStorage.getAccess();
+        if (!accessToken) {
+          queue.forEach(item => item.reject(error));
+          queue = [];
+          await tokenStorage.clear();
+          emitUnauthorized();
+          return Promise.reject(error);
+        }
 
         // Release queue after refresh
         queue.forEach(item => item.resolve(accessToken));
@@ -106,10 +117,10 @@ async function handleAuthError(error: any, originApi: typeof api | typeof pyapi)
         ensureHeaders(original).Authorization = `Bearer ${accessToken}`;
         return originApi(original);
       } catch (refreshError) {
-        // Failed to refresh
         queue.forEach(item => item.reject(refreshError));
         queue = [];
         await tokenStorage.clear();
+        emitUnauthorized();
         return Promise.reject(error);
       } finally {
         refreshing = false;
@@ -120,18 +131,37 @@ async function handleAuthError(error: any, originApi: typeof api | typeof pyapi)
     return Promise.reject(error);
 
   } catch (catchError) {
+    // Extreme: if there's any failure here, assume unrecoverable authentication failure and log out
+    await tokenStorage.clear();
+    emitUnauthorized();
     return Promise.reject(catchError);
   }
 }
 
+// Intercept and log all responses for api
 api.interceptors.response.use(
-  response => response,
-  error => handleAuthError(error, api)
+  response => {
+    // Optionally remove logs in production
+    // console.log("API RESPONSE:", response);
+    return response;
+  },
+  error => {
+    // Optionally remove error logs in production
+    // console.error("API ERROR:", error);
+    return handleAuthError(error, api);
+  }
 );
 
+// Intercept and log all responses for pyapi
 pyapi.interceptors.response.use(
-  response => response,
-  error => handleAuthError(error, pyapi)
+  response => {
+    // Optionally remove logs in production
+    // console.log("PYAPI RESPONSE:", response);
+    return response;
+  },
+  error => {
+    // Optionally remove error logs in production
+    // console.error("PYAPI ERROR:", error);
+    return handleAuthError(error, pyapi);
+  }
 );
-
-

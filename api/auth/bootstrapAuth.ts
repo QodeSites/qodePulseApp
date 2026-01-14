@@ -8,15 +8,15 @@ export async function bootstrapAuth() {
 
     const res = await axios.post(
       `${process.env.EXPO_PUBLIC_PYTHON_API_URL}/auth/refresh-token`,
-      { refreshToken },
+      { refresh_token : refreshToken },
       { headers: { 
         "X-Client-Type": "native",
         "X-Client-Id": process.env.EXPO_CLIENT_X_ID || ""
       }}
     );
 
-    await tokenStorage.setAccess(res.data.accessToken);
-    await tokenStorage.setRefresh(res.data.refreshToken);
+    await tokenStorage.setAccess(res.data.access_token);
+    await tokenStorage.setRefresh(res.data.refresh_token);
 
     return true;
   } catch {
