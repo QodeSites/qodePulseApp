@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { setShouldAnimateExitingForTag } from 'react-native-reanimated/lib/typescript/core';
 import { useUser } from '@/context/UserContext';
 import { oauthlogin } from '@/api/auth/auth.service';
 
@@ -26,7 +25,7 @@ export default function Page() {
  
 
       // Make sure userInfo structure is correct before proceeding
-      if (userInfo && userInfo.data.user && userInfo.data.user.id && userInfo.data.user.email) {
+      if (userInfo && userInfo?.data?.user && userInfo?.data.user.id && userInfo?.data.user.email) {
         try {
           const userFromApi = await oauthlogin({
             provider: "google",
@@ -38,7 +37,7 @@ export default function Page() {
           });
 
           setUser(userFromApi);
-          router.replace('/(tabs)');
+          router.replace('/(auth)/register-flow');
         } catch (e) {
           setError('Failed to log in with Google.');
         }

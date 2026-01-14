@@ -1,7 +1,9 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { pyapi } from '@/api/axios';
 import { useFocusEffect } from '@react-navigation/native';
+// Import authEvents from the relevant location
+import { authEvents } from '@/hooks/authEvents';
 
 type UserData = {
   created_at: string;
@@ -47,9 +49,18 @@ export default function HomePage() {
     }, [])
   );
 
+  // Handler for logout button
+  const handleLogout = () => {
+    authEvents.logout();
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to QodePulse</Text>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutButtonText}>Logout</Text>
+      </TouchableOpacity>
 
       {loading && (
         <View style={{ alignItems: 'center', marginVertical: 20 }}>
@@ -161,6 +172,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
     marginTop: 8,
+  },
+  logoutButton: {
+    position: 'absolute',
+    top: 36,
+    right: 24,
+    backgroundColor: '#f33',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    zIndex: 2,
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+    letterSpacing: 0.5,
   },
   footer: {
     fontSize: 11,

@@ -45,7 +45,10 @@ function RootLayoutInner() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)/register" />
+        <Stack.Screen name="(auth)/register-flow/index" />
+        <Stack.Screen name="(auth)/register-flow/enter-pan/index" />
+        <Stack.Screen name="(auth)/register-flow/final-step/index" />
+        <Stack.Screen name="(auth)/register/index" />
         <Stack.Screen name="(tabs)" />
       </Stack>
     </ThemeProvider>

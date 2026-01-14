@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -11,12 +11,11 @@ import { onUnauthorized } from '@/hooks/authEvents';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { user, setUser, isAuthenticated } = useUser();
-
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onUnauthorized(() => {
-      setUser(null);             
+      setUser(null);
       router.replace("/(auth)/register");
     });
 
@@ -31,19 +30,24 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="house.fill" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
           title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="paperplane.fill" color={color} />
+          ),
         }}
       />
     </Tabs>
