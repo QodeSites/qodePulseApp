@@ -1,4 +1,4 @@
-import { api, pyapi } from "@/api/axios";
+import { pyapi } from "@/api/axios";
 import { tokenStorage } from "./tokenStorage";
 
 export async function login(email: string, password: string) {
@@ -13,7 +13,7 @@ export async function login(email: string, password: string) {
 export async function logout() {
   const refreshToken = await tokenStorage.getRefresh();
   if (refreshToken) {
-    await pyapi.post("/logout", { refreshToken });
+    await pyapi.post("/auth/logout", { refresh_token : refreshToken });
   }
   await tokenStorage.clear();
 }

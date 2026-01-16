@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { useUser } from '@/context/UserContext';
 import { oauthlogin } from '@/api/auth/auth.service';
+import { useUser } from '@/context/UserContext';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 
 export default function Page() {
   const router = useRouter();
@@ -13,45 +13,53 @@ export default function Page() {
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+      forceCodeForRefreshToken: true,
+      accountName: ''
     });
   }, []);
 
   const startSignInFlow = async () => {
     setError('');
     setIsLoading(true);
+  
     try {
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+  
+      // 👇 THIS IS THE KEY LINE
+      await GoogleSignin.signOut();
+  
       const userInfo = await GoogleSignin.signIn();
- 
-
-      // Make sure userInfo structure is correct before proceeding
-      if (userInfo && userInfo?.data?.user && userInfo?.data.user.id && userInfo?.data.user.email) {
-        try {
-          const userFromApi = await oauthlogin({
-            provider: "google",
-            provider_user_id: userInfo.data.user.id,
-            email: userInfo.data.user.email,
-            username: userInfo.data.user.name ?? userInfo.data.user.email.split("@")[0],
-            full_name: userInfo.data.user.name ?? "",
-            oauth_payload: userInfo
-          });
-
-          setUser(userFromApi);
-          router.replace('/(auth)/register-flow');
-        } catch (e) {
-          setError('Failed to log in with Google.');
-        }
+  
+      if (
+        userInfo?.data?.user?.id &&
+        userInfo?.data?.user?.email
+      ) {
+        const userFromApi = await oauthlogin({
+          provider: "google",
+          provider_user_id: userInfo.data.user.id,
+          email: userInfo.data.user.email,
+          username:
+            userInfo.data.user.name ??
+            userInfo.data.user.email.split("@")[0],
+          full_name: userInfo.data.user.name ?? "",
+          oauth_payload: userInfo,
+        });
+  
+        setUser(userFromApi);
+        router.replace('/(auth)/register-flow');
       } else {
         setError('No user information returned.');
       }
-
     } catch (err) {
       setError('Authentication failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   return (
     <View className="flex-1 bg-background items-center justify-center px-4">
       <View className="flex flex-row items-end mb-8">
@@ -96,7 +104,7 @@ export default function Page() {
       </TouchableOpacity>
 
       <Text className="text-center text-[11px] text-[#789] mt-8">
-        © 2025 Qode Advisors LLP | SEBI Registered PMS No: INP000008914 | All Rights Reserved
+        © 2025 Qode Advisors LLP | SEBI Registered PMS No: INP000008914 | All Rights Reserved .
       </Text>
     </View>
   );

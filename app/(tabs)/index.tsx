@@ -4,6 +4,7 @@ import { pyapi } from '@/api/axios';
 import { useFocusEffect } from '@react-navigation/native';
 // Import authEvents from the relevant location
 import { authEvents } from '@/hooks/authEvents';
+import { logout } from '@/api/auth/auth.service';
 
 type UserData = {
   created_at: string;
@@ -51,6 +52,7 @@ export default function HomePage() {
 
   // Handler for logout button
   const handleLogout = () => {
+    logout();
     authEvents.logout();
   };
 
@@ -125,7 +127,7 @@ export default function HomePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafcff',
+    backgroundColor: '#aaaaaa',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,

@@ -1,6 +1,8 @@
-import { View, Text, Animated } from "react-native";
+import { View, Text, Animated, StyleSheet, ScrollView } from "react-native";
 import { useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
+
+// No Container import
 
 export default function ThankYouScreen() {
   const router = useRouter();
@@ -31,21 +33,48 @@ export default function ThankYouScreen() {
   }, []);
 
   return (
-    <View className="flex-1 bg-background items-center justify-center">
+    <ScrollView
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      style={{ backgroundColor: "#fff", flex: 1 }}
+    >
       <Animated.View
         style={{
           opacity: fadeAnim,
           transform: [{ scale: scaleAnim }],
         }}
       >
-        <Text className="text-3xl font-semibold text-gray-900 text-center">
+        <Text style={styles.title}>
           Thank you
         </Text>
 
-        <Text className="text-base text-gray-500 text-center mt-2">
+        <Text style={styles.subtitle}>
           Your submission was successful
         </Text>
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  contentContainer: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    paddingBottom: 32,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: "600",
+    color: "#111827",
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6b7280",
+    textAlign: "center",
+    marginTop: 8,
+  },
+});

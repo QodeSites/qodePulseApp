@@ -1,16 +1,17 @@
+import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
   Animated,
-  TextInput,
-  KeyboardAvoidingView,
+  Dimensions,
+  Keyboard,
+  Modal,
   Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Pencil } from "lucide-react-native";
-import { Button } from "@/components/ui/button";
 
 type Props = {
   visible: boolean;
@@ -20,7 +21,7 @@ type Props = {
   onSubmit: (number: string) => void;
   onEditNumber: () => void;
   onClose: () => void;
-  resendOtp: (number: string) => void; // Now takes number as input
+  resendOtp: (number: string) => void;
 };
 
 function formatMMSS(seconds: number) {
@@ -42,48 +43,59 @@ export default function OtpBottomModal({
   resendOtp,
 }: Props) {
   const slideAnim = useRef(new Animated.Value(300)).current;
-  // For handling edit mode (editing phone number in-place)
   const [isEditingNumber, setIsEditingNumber] = useState(false);
   const [editNumberValue, setEditNumberValue] = useState(phoneNumber);
-
-  // Timer state for OTP resend (5 minutes = 300 seconds)
   const [timer, setTimer] = useState(300);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  /* ---------------- Keyboard handling ---------------- */
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (visible) {
-      setTimer(300); // Reset timer on modal visible
-    }
+    const showSub =
+      Platform.OS === "ios"
+        ? Keyboard.addListener("keyboardWillChangeFrame", (e) => {
+            const height =
+              Dimensions.get("window").height -
+              e.endCoordinates.screenY;
+            setKeyboardHeight(Math.max(0, height));
+          })
+        : Keyboard.addListener("keyboardDidShow", (e) => {
+            setKeyboardHeight(e.endCoordinates.height);
+          });
+
+    const hideSub =
+      Platform.OS === "ios"
+        ? Keyboard.addListener("keyboardWillHide", () => {
+            setKeyboardHeight(0);
+          })
+        : Keyboard.addListener("keyboardDidHide", () => {
+            setKeyboardHeight(0);
+          });
 
     return () => {
-      if (interval) clearInterval(interval);
+      showSub.remove();
+      hideSub.remove();
     };
+  }, []);
+
+  /* ---------------- Timer ---------------- */
+  useEffect(() => {
+    if (!visible) return;
+
+    setTimer(300);
+    const interval = setInterval(() => {
+      setTimer((t) => (t > 0 ? t - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [visible, phoneNumber]);
 
+  /* ---------------- Slide animation ---------------- */
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (visible && timer > 0) {
-      interval = setInterval(() => setTimer((sec) => (sec > 0 ? sec - 1 : 0)), 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [visible, timer]);
-
-  useEffect(() => {
-    if (visible) {
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: 300,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }
+    Animated.timing(slideAnim, {
+      toValue: visible ? 0 : 300,
+      duration: visible ? 250 : 200,
+      useNativeDriver: true,
+    }).start();
   }, [visible]);
 
   useEffect(() => {
@@ -99,37 +111,32 @@ export default function OtpBottomModal({
       editNumberValue.trim() !== "" &&
       editNumberValue !== phoneNumber
     ) {
-      // Pass new phone number up to parent via callback
-      onEditNumber?.();
+      onEditNumber();
     }
     setIsEditingNumber(false);
   };
 
   const handleResendOtp = () => {
-    resendOtp?.(editNumberValue || phoneNumber);
+    resendOtp(editNumberValue || phoneNumber);
     setTimer(300);
   };
 
   const handleSubmit = () => {
-    onSubmit?.(editNumberValue || phoneNumber);
+    onSubmit(editNumberValue || phoneNumber);
   };
 
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="none"
-      onRequestClose={onClose}
-    >
-      <View className="flex-1 bg-black/40 justify-end">
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
+    <Modal transparent visible={visible} animationType="none">
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)" }}>
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
           <Animated.View
-            className="bg-white rounded-t-2xl px-5 pt-6 pb-8"
             style={{
-              transform: [{ translateY: slideAnim }],
+              transform: [
+                { translateY: slideAnim },
+                { translateY: -keyboardHeight },
+              ],
             }}
+            className="bg-white rounded-t-2xl px-5 pt-6 pb-8"
           >
             {/* Header */}
             <View className="flex-row justify-between items-center mb-4">
@@ -141,7 +148,7 @@ export default function OtpBottomModal({
               </TouchableOpacity>
             </View>
 
-            {/* Phone number (editable) */}
+            {/* Phone number */}
             <View className="flex-row items-center mb-5">
               {isEditingNumber ? (
                 <>
@@ -149,15 +156,14 @@ export default function OtpBottomModal({
                     value={editNumberValue}
                     onChangeText={setEditNumberValue}
                     keyboardType="phone-pad"
-                    placeholder="Enter phone number"
-                    className="flex-1 border border-blue-300 rounded-lg px-2 py-1 text-base mr-2"
+                    className="flex-1 border border-blue-300 rounded-lg px-2 py-1 mr-2"
                     autoFocus
                   />
                   <TouchableOpacity
                     onPress={handleEditNumberSave}
                     style={{ marginRight: 8 }}
                   >
-                    <Text className="text-blue-600 text-base font-semibold">
+                    <Text className="text-blue-600 font-semibold">
                       Save
                     </Text>
                   </TouchableOpacity>
@@ -185,18 +191,15 @@ export default function OtpBottomModal({
             {/* OTP input */}
             <TextInput
               value={otp}
-              onChangeText={(val) =>
-                onOtpChange(val.replace(/[^0-9]/g, ""))
-              }
+              onChangeText={(v) => onOtpChange(v.replace(/[^0-9]/g, ""))}
               keyboardType="number-pad"
               maxLength={6}
               placeholder="Enter 6-digit OTP"
               className="border border-gray-300 rounded-lg px-4 py-3 text-lg text-center tracking-widest mb-6"
-              editable={!isEditingNumber}
             />
 
-            {/* Timer & Resend OTP */}
-            <View className="flex-row justify-between items-center mb-6">
+            {/* Timer */}
+            <View className="flex-row justify-between items-center mb-4">
               <Text className="text-gray-500 text-sm font-mono">
                 {timer > 0
                   ? `Resend available in ${formatMMSS(timer)}`
@@ -205,23 +208,21 @@ export default function OtpBottomModal({
               <TouchableOpacity
                 onPress={handleResendOtp}
                 disabled={timer > 0}
-                style={[
-                  { opacity: timer > 0 ? 0.6 : 1, marginLeft: 8 },
-                ]}
+                style={{ opacity: timer > 0 ? 0.5 : 1 }}
               >
                 <Text
-                  className={`${
+                  className={`text-sm ${
                     timer > 0
                       ? "text-gray-400"
                       : "text-blue-600 font-semibold"
-                  } text-sm`}
+                  }`}
                 >
                   Resend OTP
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Submit button */}
+            {/* Submit */}
             <Button
               onPress={handleSubmit}
               disabled={otp.length < 6 || isEditingNumber}
@@ -232,7 +233,7 @@ export default function OtpBottomModal({
               Submit
             </Button>
           </Animated.View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );

@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { View, Text, TextInput } from "react-native";
+import { useState, useRef } from "react";
+import { View, Text, TextInput, StyleSheet, Keyboard, Platform } from "react-native";
 import { Button } from "@/components/ui/button";
 import OtpBottomModal from "@/components/otp-input";
 import { useRouter } from "expo-router";
+import { Container } from "@/components/ui/container";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
@@ -11,6 +12,7 @@ export default function PanInputScreen() {
   const [error, setError] = useState("");
   const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [otp, setOtp] = useState("");
+  const inputRef = useRef<TextInput>(null);
 
   // This could be a phone pulled from context or prior steps, hardcoding for now.
   // In a real flow, replace this as needed.
@@ -31,10 +33,11 @@ export default function PanInputScreen() {
   const handleSubmit = (number: string) => {
     setOtp(""); // Reset OTP on new submit
     setOtpModalVisible(true);
+    // Hide the PAN input keyboard (for more natural animation of modal up)
+    Keyboard.dismiss();
     // Optionally do something with the PAN value or phone number here
   };
 
-  // onSubmit now takes phoneNumber as input
   const router = useRouter();
 
   const handleOtpSubmit = (submittedPhoneNumber: string) => {
@@ -42,61 +45,69 @@ export default function PanInputScreen() {
     router.push("/(auth)/register-flow/final-step");
   };
 
-  // resendOtp callback, takes phone number as input
   const handleResendOtp = (number: string) => {
-    // Implement resend OTP logic, for now just log
-    // e.g., sendOtpToNumber(number);
-    // You may also reset otp value if needed
-    // For placeholder:
-    // console.log("Resending OTP to:", number);
+    // Implement resend OTP logic here
   };
 
   const handleEditNumber = () => {
-    // If needed, allow go back to edit phone number, you can navigate or update state
+    // Optional: Implement edit number navigation here
   };
 
   const isValid = PAN_REGEX.test(pan);
 
   return (
-    <View className="flex-1 bg-background px-5 pt-16">
-      {/* Title */}
-      <Text className="text-2xl font-bold text-gray-900 mb-2">
+    <Container
+      className="bg-background px-5 pt-16"
+      // Apply vertical alignment via contentContainerStyle
+      // @ts-ignore
+      contentContainerStyle={[styles.container]}
+    >
+      <Text style={styles.title}>
         Enter PAN Card Number
       </Text>
 
-      <Text className="text-base text-gray-600 mb-6">
+      <Text style={styles.subtitle}>
         PAN is required for identity verification
       </Text>
 
       {/* Input */}
       <TextInput
+        ref={inputRef}
         value={pan}
         onChangeText={handleChange}
         placeholder="ABCDE1234F"
         autoCapitalize="characters"
         maxLength={10}
         keyboardType="default"
-        className={`border rounded-lg px-4 py-3 text-lg tracking-widest ${
+        style={[
+          styles.input,
           error
-            ? "border-red-500"
+            ? styles.inputError
             : pan.length === 10
-            ? "border-green-500"
-            : "border-gray-300"
-        }`}
+            ? styles.inputSuccess
+            : styles.inputDefault,
+        ]}
+        returnKeyType="done"
+        blurOnSubmit={true}
+        onSubmitEditing={() => {
+          if (isValid) {
+            handleSubmit(phoneNumber);
+          }
+        }}
       />
 
       {/* Error */}
       {error ? (
-        <Text className="text-red-500 mt-2 text-sm">{error}</Text>
+        <Text style={styles.error}>{error}</Text>
       ) : null}
 
       {/* Helper */}
-      <Text className="text-gray-500 text-sm mt-2">
+      <Text style={styles.helper}>
         Example: ABCDE1234F
       </Text>
 
       {/* Submit */}
-      <View className="mt-8">
+      <View style={styles.buttonWrapper}>
         <Button
           onPress={() => handleSubmit(phoneNumber)}
           disabled={!isValid}
@@ -106,7 +117,7 @@ export default function PanInputScreen() {
         </Button>
       </View>
 
-      {/* OTP Modal */}
+      {/* OTP Modal moves input above keyboard when open */}
       <OtpBottomModal
         visible={otpModalVisible}
         phoneNumber={phoneNumber}
@@ -116,7 +127,59 @@ export default function PanInputScreen() {
         resendOtp={handleResendOtp}
         onEditNumber={handleEditNumber}
         onClose={() => setOtpModalVisible(false)}
+        // No change needed: otp-input already uses KeyboardAvoidingView and ScrollView,
+        // but Keyboard.dismiss() (above) ensures keyboard closes before modal opens.
       />
-    </View>
+    </Container>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    justifyContent: "flex-start",
+    alignItems: "stretch",
+    paddingBottom: 32,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6b7280",
+    marginBottom: 24,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 18,
+    letterSpacing: 4,
+  },
+  inputDefault: {
+    borderColor: "#d1d5db",
+  },
+  inputError: {
+    borderColor: "#ef4444",
+  },
+  inputSuccess: {
+    borderColor: "#22c55e",
+  },
+  error: {
+    color: "#ef4444",
+    marginTop: 8,
+    fontSize: 14,
+  },
+  helper: {
+    color: "#6b7280",
+    fontSize: 14,
+    marginTop: 8,
+  },
+  buttonWrapper: {
+    marginTop: 32,
+  },
+});
