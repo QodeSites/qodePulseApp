@@ -1,7 +1,7 @@
 import { tokenStorage } from "@/api/auth/tokenStorage";
+import { emitUnauthorized } from "@hooks/authEvents";
 import axios from "axios";
 import { bootstrapAuth } from "./auth/bootstrapAuth";
-import { emitUnauthorized } from "@hooks/authEvents";
 // Utility to make sure headers object exists and is not undefined/null
 function ensureHeaders(config: any) {
   if (!config.headers) config.headers = {};
@@ -11,6 +11,7 @@ function ensureHeaders(config: any) {
 // Axios instances (fixed for correct env var names, fallback, and consistent export)
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "";
 const PY_BASE_URL = process.env.EXPO_PUBLIC_PYTHON_API_URL || process.env.PYTHON_PUBLIC_API_URL || "";
+const DATA_BASE_URL = process.env.EXPO_PUBLIC_DATA_API_URL || process.env.EXPO_PUBLIC_DATA_API_URL || "";
 
 const X_CLIENT_ID =
   process.env.EXPO_PUBLIC_X_CLIENT_ID ||
@@ -34,7 +35,11 @@ const pyapi = axios.create({
   },
 });
 
-export { api, pyapi };
+const dataapi = axios.create({
+  baseURL: DATA_BASE_URL,
+});
+
+export { api, dataapi, pyapi };
 
 let refreshing = false as boolean;
 let queue: Array<{resolve: (token: string) => void, reject: (err: any) => void}> = [];
@@ -154,6 +159,19 @@ api.interceptors.response.use(
 
 // Intercept and log all responses for pyapi
 pyapi.interceptors.response.use(
+  response => {
+    // Optionally remove logs in production
+    // console.log("PYAPI RESPONSE:", response);
+    return response;
+  },
+  error => {
+    // Optionally remove error logs in production
+    // console.error("PYAPI ERROR:", error);
+    return handleAuthError(error, pyapi);
+  }
+);
+
+dataapi.interceptors.response.use(
   response => {
     // Optionally remove logs in production
     // console.log("PYAPI RESPONSE:", response);
